@@ -10,17 +10,25 @@ class MailQTestCase(unittest.TestCase):
     def setUp(self):
         self.testFile = open('testdata.txt')
         self.fullTestFile = open('full_mailq.txt')
+        self.recordAsDict = {'toAddress': 'bob@google.com',
+                'fromAddress': 'orders@sender.com',
+                'queueId': '6D8E95990244',
+                'errorMessage': 'User is gone. 550 You mad bro?',
+                'smtpCode': 550 }
 
 
 
     def test_init(self):
         mailQ = mailq.MailQReader(self.testFile)
+        self.testFile.seek(0)
         self.assertTrue(mailQ._queueData != None)
         i = 0
         for i, l in enumerate(mailQ._queueData):
             pass
-        self.assertEquals(i + 1, 26)
+        self.testFile.seek(0)
+        self.assertEquals(i + 1, len(self.testFile.readlines()))
         self.assertRaises(mailq.InvalidParameter, mailq.MailQReader, 'Bobby')
+
 
 
     def test_iteration(self):
@@ -47,7 +55,7 @@ class MailQTestCase(unittest.TestCase):
         f = open('testdata.txt')
         f.readline()
         lines = []
-        for i in range(0,3):
+        for i in range(0,2):
             lines.append(f.readline())
         return ''.join(lines)
 
@@ -61,8 +69,7 @@ class MailQTestCase(unittest.TestCase):
         record = mailQ.createRecord(self.readTestRecord())
         self.assertEquals(record.queueId, '878005990241*')
         self.assertEquals(record.fromAddress, 'frank@example.com')
-        self.assertEquals(record.toAddress, ['ff@aim.com',
-            'jeff@frank.com'])
+        self.assertEquals(record.toAddress, 'ff@aim.com')
         self.assertEquals(record.smtpCode, '-')
 
     def test_fullFile(self):
@@ -71,6 +78,14 @@ class MailQTestCase(unittest.TestCase):
         for entry in mailQ.nextMail():
             recordCount.append(entry)
         self.assertEquals(len(recordCount), 267)
+
+    def test_domain(self):
+        mailqItem = mailq.MailQRecord(**self.recordAsDict)
+        self.assertEquals('google.com', mailqItem.domain)
+
+    def test_user(self):
+        mailqItem = mailq.MailQRecord(**self.recordAsDict)
+        self.assertEquals('bob', mailqItem.user)
 
 
 

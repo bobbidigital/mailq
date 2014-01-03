@@ -39,6 +39,8 @@ class MailQReader(object):
         return self.nexMail()
 
     def nextMail(self):
+        # Use a generator because we don't know how big the mailq
+        # will be. Safer to move through it record by record
         while True:
             entryString = self._getRecord()
             if not entryString or self.isEndOfFileMarker(entryString):
@@ -48,6 +50,10 @@ class MailQReader(object):
                yield mailQRecord
 
     def _getRecordLength(self, recordLine):
+        # Record lenghts can vary based on type. Loop through and figure
+        # and figure out how long the record is so we read the right
+        # number of lines.
+
         recordLength = 2
         try:
             statusIndicator = re.match(mailq.expressions['queueId'],
@@ -60,9 +66,10 @@ class MailQReader(object):
             if self.isEndOfFileMarker(recordLine):
                 return 1
             raise InvalidParameter(
-                "Invalid Parameter Line must have QueueId present") 
+                "Invalid Parameter Line must have QueueId present")
 
     def _getRecord(self):
+        # Grab the record as a string
         line = self._queueData.readline()
         if not line:
             return ''
@@ -94,17 +101,35 @@ class MailQReader(object):
     def createRecord(self, entryString):
         fields = {}
         for key, expression in mailq.expressions.iteritems():
-            if key in ['toAddress']:
-                fields[key] = re.findall(expression, entryString,
-                    re.IGNORECASE | re.MULTILINE)
-            else:
-                try:
-                    fields[key] = re.search(expression, entryString,
-                        re.IGNORECASE | re.MULTILINE).group(1)
-                except AttributeError:
-                    fields[key] = '-'
-
-        MailQRecord = namedtuple('MailQRecord', mailq.expressions.keys())
+            try:
+                fields[key] = re.search(expression, entryString,
+                   re.IGNORECASE | re.MULTILINE).group(1)
+            except AttributeError:
+                fields[key] = '-'
+        #MailQRecord = namedtuple('MailQRecord', mailq.expressions.keys())
+        mailqrecord = MailQRecord(**fields)
         return MailQRecord(**fields)
 
+
+class MailQRecord(object):
+
+    __dict = {}
+    def __init__(self, **kwargs):
+        for key, value in kwargs.iteritems():
+            self.__dict[key] = value
+
+    def __getattr__(self, name):
+        try:
+            return self.__dict[name]
+        except KeyError:
+            msg = "'{0}' object has no attribute '{1}'"
+            raise AttributeError(msg.format(type(self).__name__, name))
+
+    @property
+    def domain(self):
+        return self.toAddress.split('@', 2)[1]
+
+    @property
+    def user(self):
+        return self.toAddress.split('@',2)[0]
 

@@ -1,7 +1,6 @@
 -Queue ID- --Size-- ----Arrival Time---- -Sender/Recipient-------
 878005990241*    3448 Fri Dec 20 11:14:10  frank@example.com
                                          ff@aim.com
-                                         jeff@frank.com
 
 6D8E95990244*   15197 Fri Dec 20 11:14:02  order@grubhub.com
                                          nn@bu.edu

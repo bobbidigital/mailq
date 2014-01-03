@@ -36,10 +36,16 @@ class MailQReader(object):
         return self
 
     def __next__(self):
-        return self._readNextEntry()
+        return self.nexMail()
 
     def nextMail(self):
-        return self._readNextEntry()
+        while True:
+            entryString = self._getRecord()
+            if not entryString or self.isEndOfFileMarker(entryString):
+               raise StopIteration()
+            else:
+               mailQRecord = self.createRecord(entryString)
+               yield mailQRecord
 
     def _getRecordLength(self, recordLine):
         recordLength = 2
@@ -51,6 +57,8 @@ class MailQReader(object):
                 recordLength = 1
             return recordLength
         except AttributeError:
+            if self.isEndOfFileMarker(recordLine):
+                return 1
             raise InvalidParameter(
                 "Invalid Parameter Line must have QueueId present") 
 
@@ -76,13 +84,12 @@ class MailQReader(object):
         return ''.join(lines)
 
 
-    def _readNextEntry(self):
-        while True:
-            entryString = self._getRecord()
-            if not entryString:
-               raise StopIteration()
-            mailQRecord = self.createRecord(entryString)
-            yield mailQRecord
+    def isEndOfFileMarker(self, entryString):
+        endOfFile = '-- [0-9]+ Kbytes in [0-9]+ Requests.'
+        if re.search(endOfFile, entryString):
+            return True
+        else:
+            return False
 
     def createRecord(self, entryString):
         fields = {}
@@ -96,6 +103,7 @@ class MailQReader(object):
                         re.IGNORECASE | re.MULTILINE).group(1)
                 except AttributeError:
                     fields[key] = '-'
+
         MailQRecord = namedtuple('MailQRecord', mailq.expressions.keys())
         return MailQRecord(**fields)
 

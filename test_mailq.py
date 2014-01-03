@@ -9,6 +9,7 @@ class MailQTestCase(unittest.TestCase):
 
     def setUp(self):
         self.testFile = open('testdata.txt')
+        self.fullTestFile = open('full_mailq.txt')
 
 
 
@@ -63,6 +64,14 @@ class MailQTestCase(unittest.TestCase):
         self.assertEquals(record.toAddress, ['ff@aim.com',
             'jeff@frank.com'])
         self.assertEquals(record.smtpCode, '-')
+
+    def test_fullFile(self):
+        mailQ = mailq.MailQReader(self.fullTestFile)
+        recordCount = []
+        for entry in mailQ.nextMail():
+            recordCount.append(entry)
+        self.assertEquals(len(recordCount), 267)
+        import pdb;pdb.set_trace()
 
 
 

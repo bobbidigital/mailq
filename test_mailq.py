@@ -71,7 +71,6 @@ class MailQTestCase(unittest.TestCase):
         for entry in mailQ.nextMail():
             recordCount.append(entry)
         self.assertEquals(len(recordCount), 267)
-        import pdb;pdb.set_trace()
 
 
 

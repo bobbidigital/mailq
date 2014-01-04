@@ -1,16 +1,13 @@
 import re
-import StringIO
 import mailq
-from collections import namedtuple
+import sys
 
 expressions = {'queueId': '^\s*([a-zA-Z0-9\*\-]+)',
                'fromAddress': '\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4})',
-               'toAddress': '^\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4})\n',
+               'toAddress': '^\s*<?([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4})>?\n',
                'errorMessage': '^\s*\(([^\)]+)',
                'smtpCode': '^\s*\([^\)]+ ([4-5][0-9]{2})',
                }
-
-
 
 statusSymbols = {'processing': '*', 'highLoad': 'X','tooYoung': '-'}
 
@@ -24,16 +21,22 @@ class MailQReader(object):
     _previousLine = ""
 
     def __init__(self, fd, hasHeader=True):
+        charsRead = 0
         try:
-            fd.readline()
+            line = fd.readline()
             if not hasHeader:
                 fd.seek(0)
+            else:
+                while self.isHeader(line):
+                   line = fd.readline()
+                   charsRead = len(line)
+                fd.seek(charsRead * - 1, 1)
             self._queueData = fd
         except AttributeError:
             raise InvalidParameter('Method takes a file-like object')
 
     def __iter__(self):
-        return self
+        return self.__next__()
 
     def __next__(self):
         return self.nexMail()
@@ -92,11 +95,21 @@ class MailQReader(object):
 
 
     def isEndOfFileMarker(self, entryString):
-        endOfFile = '-- [0-9]+ Kbytes in [0-9]+ Requests.'
-        if re.search(endOfFile, entryString):
-            return True
-        else:
-            return False
+        footer_types =  ['-- [0-9]+ Kbytes in [0-9]+ Requests.',
+                '\s+ Total requests: [0-9]+']
+
+        for footer in footer_types:
+            if re.search(footer, entryString):
+                return True
+        return False
+
+    def isHeader(self, line):
+        header_types = ['\s+.+mqueue \([0-9]+ requests\)',
+                '^-+Q-ID-+\s', '^-Queue ID-']
+        for header in header_types:
+            if re.match(header, line):
+                return True
+        return False
 
     def createRecord(self, entryString):
         fields = {}
@@ -106,7 +119,6 @@ class MailQReader(object):
                    re.IGNORECASE | re.MULTILINE).group(1)
             except AttributeError:
                 fields[key] = '-'
-        #MailQRecord = namedtuple('MailQRecord', mailq.expressions.keys())
         mailqrecord = MailQRecord(**fields)
         return MailQRecord(**fields)
 

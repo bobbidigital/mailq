@@ -1,3 +1,4 @@
+		/var/spool/mqueue (15 requests)
 -Queue ID- --Size-- ----Arrival Time---- -Sender/Recipient-------
 F2E1E3C881EA    15950 Mon Dec 30 13:18:20  order@grubhub.com
 (Host or domain name not found. Name service error for name=gmaill.com type=MX: Host not found, try again)

@@ -1,6 +1,7 @@
 import unittest
 import StringIO
 import mailq
+import datetime
 
 
 
@@ -15,7 +16,8 @@ class MailQTestCase(unittest.TestCase):
                 'fromAddress': 'orders@sender.com',
                 'queueId': '6D8E95990244',
                 'errorMessage': 'User is gone. 550 You mad bro?',
-                'smtpCode': 550 }
+                'smtpCode': 550,
+                'arrivalTime': 'Fri Dec 20 11:14:10'}
 
 
 
@@ -94,6 +96,13 @@ class MailQTestCase(unittest.TestCase):
     def test_user(self):
         mailqItem = mailq.MailQRecord(**self.recordAsDict)
         self.assertEquals('bob', mailqItem.user)
+
+
+    def test_date_conversion(self):
+        mailQ = mailq.MailQReader(self.redhatTestFile)
+        dt = mailQ.convertDate(self.recordAsDict['arrivalTime'])
+        convertedDate = datetime.datetime(2013, 12, 20, 11, 14, 10)
+        self.assertEquals(dt, convertedDate)
 
 
 

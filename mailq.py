@@ -3,8 +3,8 @@ import mailq
 import sys
 
 expressions = {'queueId': '^\s*([a-zA-Z0-9\*\-]+)',
-               'fromAddress': '\s*([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4})',
-               'toAddress': '^\s*<?([A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4})>?\n',
+               'fromAddress': '\s*<?([A-Z0-9._%+-]+@[A-Z0-9._-]+\.[A-Z]{2,4})>?',
+               'toAddress': '^\s*<?([A-Z0-9._%+-]+@[A-Z0-9._-]+\.[A-Z]{2,4})>?\n',
                'errorMessage': '^\s*\(([^\)]+)',
                'smtpCode': '^\s*\([^\)]+ ([4-5][0-9]{2})',
                }
@@ -39,7 +39,7 @@ class MailQReader(object):
         return self.__next__()
 
     def __next__(self):
-        return self.nexMail()
+        return self.nextMail()
 
     def nextMail(self):
         # Use a generator because we don't know how big the mailq
@@ -74,10 +74,11 @@ class MailQReader(object):
     def _getRecord(self):
         # Grab the record as a string
         line = self._queueData.readline()
-        if not line:
-            return ''
+        while not line.strip() and not len(line) == 0:
+            line = self._queueData.readline()
+        if len(line) == 0:
+            raise StopIteration
         lines = []
-        lines.append(self._previousLine)
         lines.append(line)
         for i in range(1, self._getRecordLength(line)):
             lines.append(self._queueData.readline())
@@ -86,17 +87,14 @@ class MailQReader(object):
             if re.match(mailq.expressions['toAddress'], line, flags=re.IGNORECASE):
                 lines.append(line)
             else:
-                if not line:
-                    self._queueData.readline()
-                else:
-                    self._previousLine = line
+                self._queueData.seek(len(line) * -1, 1)
                 break
         return ''.join(lines)
 
 
     def isEndOfFileMarker(self, entryString):
         footer_types =  ['-- [0-9]+ Kbytes in [0-9]+ Requests.',
-                '\s+ Total requests: [0-9]+']
+                '\s*Total requests: [0-9]+']
 
         for footer in footer_types:
             if re.search(footer, entryString):
@@ -119,6 +117,7 @@ class MailQReader(object):
                    re.IGNORECASE | re.MULTILINE).group(1)
             except AttributeError:
                 fields[key] = '-'
+        fields['raw'] = entryString
         mailqrecord = MailQRecord(**fields)
         return MailQRecord(**fields)
 
@@ -139,7 +138,10 @@ class MailQRecord(object):
 
     @property
     def domain(self):
-        return self.toAddress.split('@', 2)[1]
+        try:
+            return self.toAddress.split('@', 2)[1]
+        except IndexError:
+            return "-"
 
     @property
     def user(self):

@@ -9,7 +9,8 @@ class MailQTestCase(unittest.TestCase):
 
     def setUp(self):
         self.testFile = open('testdata.txt')
-        self.fullTestFile = open('full_mailq.txt')
+        self.fullTestFile = open('testdata_full.txt')
+        self.redhatTestFile = open('testdata_rh.txt')
         self.recordAsDict = {'toAddress': 'bob@google.com',
                 'fromAddress': 'orders@sender.com',
                 'queueId': '6D8E95990244',
@@ -78,6 +79,13 @@ class MailQTestCase(unittest.TestCase):
         for entry in mailQ.nextMail():
             recordCount.append(entry)
         self.assertEquals(len(recordCount), 267)
+
+    def test_redhatFile(self):
+        mailQ = mailq.MailQReader(self.redhatTestFile)
+        recordCount = []
+        for entry in mailQ.nextMail():
+            recordCount.append(entry)
+        self.assertEquals(len(recordCount), 15)
 
     def test_domain(self):
         mailqItem = mailq.MailQRecord(**self.recordAsDict)
